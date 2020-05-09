@@ -59,6 +59,19 @@ router.get("/menu", verifytoken, async (req, res) => {
   res.json(usuario);
 });
 
+router.get("/menu/allgrupos", verifytoken, async (req, res) => {
+  const grupo = await Grupo.find({tipo:"Jefe"},'nombre');
+  res.json(grupo);
+});
+
+router.get("/menu/obtgrupos", verifytoken, async (req, res) => {
+  const _id = req.userId;
+  const usuario = await Usuario.findOne({ _id });
+  const nombre = usuario.email;
+  const grupo = await Grupo.find({usuario:nombre},'nombre');
+  res.json(grupo);
+});
+
 router.get("/principal", (req, res) => {
   res.json([
     {
@@ -69,9 +82,10 @@ router.get("/principal", (req, res) => {
 });
 
 router.post("/menu/crear", verifytoken, async (req, res) => {
-  const usuario = req.userId;
-  const usuarios = await Usuario.findOne({ _id: usuario });
+  const _id = req.userId;
+  const usuarios = await Usuario.findOne({ _id });
   const tipo = usuarios.tipo;
+  const usuario = usuarios.email;
   const { nombre } = req.body;
   const newGrupo = new Grupo({ usuario, nombre, tipo });
   const nombres = await Grupo.findOne({ nombre });
@@ -90,16 +104,22 @@ router.post("/menu/crear", verifytoken, async (req, res) => {
 });
 
 router.post("/menu/agregar", verifytoken, async (req, res) => {
-  const usuario = req.userId;
-  const usuarios = await Usuario.findOne({ _id: usuario });
+  const _id = req.userId;
+  const usuarios = await Usuario.findOne({ _id });
   const tipo = usuarios.tipo;
+  const usuario = usuarios.email;
   const { nombre } = req.body;
   const newGrupo = new Grupo({ usuario, nombre, tipo });
-  const gruponombre = await Grupo.findOne({ nombre: nombre });
+  const gruponombre = await Grupo.findOne({ nombre });
+  const grupousuario = await Grupo.findOne({ nombre,usuario });
   if (tipo === "Empleado") {
     if (gruponombre) {
-      await newGrupo.save();
-      return res.status(200).send("Se Ha Unido Correctamente");
+      if(grupousuario){
+        return res.status(401).send("Usted ya esta en este Grupo");
+      }else{
+        await newGrupo.save();
+        return res.status(200).send("Se Ha Unido Correctamente");
+      }     
     } else {
       return res.status(401).send("No hay un Grupo con ese Nombre");
     }
